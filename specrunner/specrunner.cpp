@@ -24,6 +24,10 @@
 #include <QtWebKit>
 #include <iostream>
 
+#if QT_VERSION < QT_VERSION_CHECK(4, 7, 0)
+#error Use Qt 4.7 or later version
+#endif
+
 class HeadlessSpecRunner: public QObject
 {
     Q_OBJECT
