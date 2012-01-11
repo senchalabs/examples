@@ -37,8 +37,9 @@ public:
 public slots:
     void log(int indent, const QString &msg);
 private slots:
-    void watch(bool ok);
     void load_started();
+    void load_finished(bool ok);
+    
 protected:
     bool hasElement(const char *select);
     void timerEvent(QTimerEvent *event);
@@ -54,30 +55,27 @@ HeadlessSpecRunner::HeadlessSpecRunner()
     , m_runs(0)
 {
     m_page.settings()->enablePersistentStorage();
-    connect(&m_page, SIGNAL(loadFinished(bool)), this, SLOT(watch(bool)));
     connect(&m_page, SIGNAL(loadStarted()), this, SLOT(load_started()));
+    connect(&m_page, SIGNAL(loadFinished(bool)), this, SLOT(load_finished(bool)));
 }
 
 void HeadlessSpecRunner::load(const QString &spec)
 {
     m_ticker.stop();
-
     m_url = QUrl::fromLocalFile(spec);
-    std::cout << "Loading Spec: " << qPrintable(m_url.toString()) << std::endl;
-
     m_page.mainFrame()->load(m_url);
     m_page.setPreferredContentsSize(QSize(1024, 600));
 }
 
 void HeadlessSpecRunner::load_started()
 {
-    std::cerr << "Load Started" << std::endl;
+    std::cout << "Loading Spec: " << qPrintable(m_url.toString()) << std::endl;
 }
 
-void HeadlessSpecRunner::watch(bool ok)
+void HeadlessSpecRunner::load_finished(bool ok)
 {
     if (!ok) {
-        std::cerr << "Can't load' " << qPrintable(m_page.mainFrame()->url().toString()) << std::endl;
+        std::cerr << "Error Loading' " << qPrintable(m_url.toString()) << std::endl;
         QApplication::instance()->exit(1);
         return;
     }
@@ -93,7 +91,9 @@ bool HeadlessSpecRunner::hasElement(const char *select)
 void HeadlessSpecRunner::log(int indent, const QString &msg)
 {
     for (int i = 0; i < indent; ++i)
+    {
         std::cout << "  ";
+    }
     std::cout << qPrintable(msg);
     std::cout << std::endl;
 }
@@ -143,8 +143,6 @@ int main(int argc, char** argv)
     }
 
     QApplication app(argc, argv);
-
-    std::cerr << argv[1] << std::endl;
 
     HeadlessSpecRunner runner;
     runner.load(QString::fromLocal8Bit(argv[1]));
