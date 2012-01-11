@@ -38,10 +38,12 @@ public slots:
     void log(int indent, const QString &msg);
 private slots:
     void watch(bool ok);
+    void load_started();
 protected:
     bool hasElement(const char *select);
     void timerEvent(QTimerEvent *event);
 private:
+    QUrl m_url;
     QWebPage m_page;
     QBasicTimer m_ticker;
     int m_runs;
@@ -53,13 +55,23 @@ HeadlessSpecRunner::HeadlessSpecRunner()
 {
     m_page.settings()->enablePersistentStorage();
     connect(&m_page, SIGNAL(loadFinished(bool)), this, SLOT(watch(bool)));
+    connect(&m_page, SIGNAL(loadStarted()), this, SLOT(load_started()));
 }
 
 void HeadlessSpecRunner::load(const QString &spec)
 {
     m_ticker.stop();
-    m_page.mainFrame()->load(spec);
+
+    m_url = QUrl::fromLocalFile(spec);
+    std::cout << "Loading Spec: " << qPrintable(m_url.toString()) << std::endl;
+
+    m_page.mainFrame()->load(m_url);
     m_page.setPreferredContentsSize(QSize(1024, 600));
+}
+
+void HeadlessSpecRunner::load_started()
+{
+    std::cerr << "Load Started" << std::endl;
 }
 
 void HeadlessSpecRunner::watch(bool ok)
@@ -114,7 +126,7 @@ void HeadlessSpecRunner::timerEvent(QTimerEvent *event)
     }
 
     ++m_runs;
-    if (m_runs > 20) {
+    if (m_runs > 100) {
         std::cout << "WARNING: too many runs and the test is still not finished!" << std::endl;
         QApplication::instance()->exit(1);
     }
@@ -131,6 +143,8 @@ int main(int argc, char** argv)
     }
 
     QApplication app(argc, argv);
+
+    std::cerr << argv[1] << std::endl;
 
     HeadlessSpecRunner runner;
     runner.load(QString::fromLocal8Bit(argv[1]));
